@@ -6,7 +6,7 @@ from rest_framework.validators import UniqueValidator
 from dynamic_tables.settings import FIELD_TYPES, MODULE_NAME
 from tables.enums import TableRowType
 from tables.models import Table, TableRow
-from tables.services import create_model, get_model, add_field_to_model, save_model
+from tables.services import create_model, get_model, add_field_to_model, save_model, rename_model, get_element_by_key
 
 
 class TableRowSerializer(serializers.ModelSerializer[TableRow]):
@@ -53,6 +53,15 @@ class TableSerializer(serializers.ModelSerializer[Table]):
         save_model(model, MODULE_NAME)
 
         return table
+
+    def update(self, instance: Table, validated_data: dict[str, Any]) -> Table:
+        instance.rows.all().delete()
+        for row in validated_data.pop("rows"):
+            TableRow.objects.create(table=instance, **row)
+
+        rename_model(instance, instance.name, validated_data["name"], MODULE_NAME)
+
+        return super().update(instance, validated_data)
 
     class Meta:
         model = Table
